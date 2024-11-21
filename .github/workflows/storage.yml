@@ -1,0 +1,35 @@
+name: Fetch Data and Save to Azure File Share
+ 
+on:
+  push:
+    branches:
+      - main
+ 
+jobs:
+  fetch-and-save-data:
+    runs-on: ubuntu-latest
+ 
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+ 
+      # Step 2: Log in to Azure CLI using Service Principal (credentials)
+      - name: Login to Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+ 
+      # Step 3: Fetch the data from the website (e.g., using curl)
+      - name: Fetch data from website
+        run: |
+          curl -o fetched_data.txt "https://example.com/api/data"  # Replace with your actual URL
+      # Step 4: Upload fetched data to Azure File Share
+      - name: Upload data to Azure File Share
+        run: |
+          az storage file upload \
+            --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+            --account-key ${{ secrets.AZURE_STORAGE_KEY }} \
+            --share-name ${{ secrets.AZURE_FILE_SHARE_NAME }} \
+            --source ./fetched_data.txt \
+            --path fetched_data_${{ github.run_number }}.txt
