@@ -14,7 +14,7 @@ jobs:
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        creds: ${{ secrets.AZURE_CREDENTAILS }}
 
     # Stap 3: Log in bij Azure Container Registry
     - name: 'Login to Azure Container Registry'
