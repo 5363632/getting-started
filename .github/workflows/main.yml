@@ -28,7 +28,7 @@ jobs:
           docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REPOSITORY_NAME }}:${{ github.run_number }}
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REPOSITORY_NAME }}:${{ github.run_number }}
 
-      # Stap 5: Deploy naar Azure Container Instances met een dynamische DNS-naam
+      # Stap 5: Deploy naar Azure Container Instances met een Mount Path
       - name: 'Deploy to Azure Container Instances'
         uses: azure/aci-deploy@v1
         with:
@@ -41,3 +41,11 @@ jobs:
           name: getting-started-github
           location: 'northeurope'
           ports: '3000'
+          volumes: |
+            [{"name": "azurefilevolume",
+              "azureFile": {
+                "shareName": "${{ secrets.FILE_SHARE_NAME }}",
+                "storageAccountName": "${{ secrets.STORAGE_ACCOUNT_NAME }}",
+                "storageAccountKey": "${{ secrets.STORAGE_ACCOUNT_KEY }}"
+              },
+              "mountPath": "/mnt/azurefiles"}]
