@@ -1,65 +1,41 @@
-name: GettingStarted_Container_Workflow
+name: Debug Azure File Share Mount
 
 on: [push]
 
 jobs:
-  build-and-deploy:
+  debug:
     runs-on: ubuntu-latest
     steps:
-      # Stap 1: Checkout de repository
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v3
 
-      # Stap 2: Log in bij Azure via Service Principal
-      - name: 'Login via Azure CLI'
+      - name: 'Login to Azure CLI'
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Stap 3: Log in bij Azure Container Registry
-      - name: 'Login to Azure Container Registry'
-        run: |
-          echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ secrets.REGISTRY_LOGIN_SERVER }} \
-          --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
-
-      # Stap 4: Build en push het Docker-image
-      - name: 'Build and push image'
-        run: |
-          docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REPOSITORY_NAME }}:${{ github.run_number }}
-          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REPOSITORY_NAME }}:${{ github.run_number }}
-
-      # Stap 5: Deploy naar Azure Container Instances met een Azure File Share Mount
       - name: 'Deploy to Azure Container Instances'
         uses: azure/aci-deploy@v1
         with:
           resource-group: ${{ secrets.RESOURCE_GROUP }}
-          dns-name-label: ${{ secrets.REPOSITORY_NAME }}-${{ github.run_number }}
+          dns-name-label: debug-container-${{ github.run_number }}
           image: ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REPOSITORY_NAME }}:${{ github.run_number }}
           registry-login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
-          name: getting-started-github
+          name: debug-container
           location: 'northeurope'
           ports: '3000'
           azure-file-volume-account-name: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
           azure-file-volume-account-key: ${{ secrets.AZURE_STORAGE_KEY }}
           azure-file-volume-share-name: container
-          azure-file-volume-mount-path: /tmp/azurefiles
+          azure-file-volume-mount-path: /mnt/azurefiles
 
-      # Stap 6: Controleer verbinding met Azure Storage Account
-      - name: 'Validate Connection to Azure Storage Account'
+      - name: Debug Mount Path in Container
         run: |
-          echo "Controleer of Azure Storage Account bereikbaar is:"
-          az storage account show --name ${{ secrets.AZURE_STORAGE_ACCOUNT }} --query "name" || echo "Storage Account niet gevonden."
-          echo "Controleer File Share in het Storage Account:"
-          az storage share list --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} --account-key ${{ secrets.AZURE_STORAGE_KEY }} --query "[?name=='container']" || echo "File Share 'container' niet gevonden."
-
-      # Stap 7: Test schrijven en lezen naar de File Share in de container
-      - name: 'Test Write and Read to Azure File Share'
-        run: |
-          echo "Schrijf testbestand naar Azure File Share via het gemounte pad."
-          echo "Test Data" > /tmp/azurefiles/testfile.txt || echo "Kan niet schrijven naar /tmp/azurefiles"
+          echo "Controleer mount path:"
+          ls -l /mnt/azurefiles || echo "Het pad /mnt/azurefiles bestaat niet"
+          echo "Test schrijven naar gemounte map"
+          echo "Test Data" > /mnt/azurefiles/testfile.txt || echo "Kan niet schrijven naar /mnt/azurefiles"
           echo "Lees inhoud van testbestand:"
-          cat /tmp/azurefiles/testfile.txt || echo "Kan bestand niet lezen."
-          echo "Controleer inhoud van het gemounte pad:"
-          ls -l /tmp/azurefiles || echo "Geen bestanden gevonden in /tmp/azurefiles"
+          cat /mnt/azurefiles/testfile.txt || echo "Kan bestand niet lezen"
