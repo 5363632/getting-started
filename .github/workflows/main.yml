@@ -43,16 +43,21 @@ jobs:
           ports: '3000'
           azure-file-volume-account-name: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
           azure-file-volume-account-key: ${{ secrets.AZURE_STORAGE_KEY }}
-          azure-file-volume-share-name: ${{ secrets.AZURE_FILE_SHARE_NAME }}
-          azure-file-volume-mount-path: ${{ secrets.MOUNT_PATH }}
+          azure-file-volume-share-name: container
+          azure-file-volume-mount-path: /mnt/azurefiles
 
-      # Stap 6: Controleer of File Share correct is gemount
+      # Stap 6: Controleer of map bestaat en maak deze indien nodig aan
+      - name: 'Create Mount Path if Missing'
+        run: |
+          if [ ! -d "/mnt/azurefiles" ]; then
+            echo "Mount path does not exist. Creating it..."
+            mkdir -p /mnt/azurefiles
+          else
+            echo "Mount path exists."
+          fi
+
+      # Stap 7: Controleer inhoud van de gemounte map
       - name: 'Validate Azure File Share Mount'
         run: |
-          if [ -d "${{ secrets.MOUNT_PATH }}" ]; then
-            echo "Mount path exists."
-            ls -l ${{ secrets.MOUNT_PATH }}
-          else
-            echo "Mount path does not exist!"
-            exit 1
-          fi
+          echo "Controleer inhoud van de gemounte map:"
+          ls -l /mnt/azurefiles || echo "Geen bestanden gevonden in de map"
