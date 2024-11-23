@@ -46,18 +46,34 @@ jobs:
           azure-file-volume-share-name: container
           azure-file-volume-mount-path: /mnt/azurefiles
 
-      # Stap 6: Controleer of map bestaat en maak deze indien nodig aan
-      - name: 'Create Mount Path if Missing'
+      # Stap 6: Debug Mount Path
+      - name: 'Debug Mount Path'
+        run: |
+          echo "Debugging mount path:"
+          echo "Lijst van root directories:"
+          ls -l /
+          echo "Controleer inhoud van /mnt:"
+          ls -l /mnt || echo "/mnt bestaat niet"
+          echo "Controleer rechten en inhoud van /mnt/azurefiles:"
+          ls -ld /mnt/azurefiles || echo "/mnt/azurefiles bestaat niet of geen toegang"
+
+      # Stap 7: Gebruik tijdelijk pad indien mount mislukt
+      - name: 'Create Temporary Mount Path if Needed'
         run: |
           if [ ! -d "/mnt/azurefiles" ]; then
-            echo "Mount path does not exist. Creating it..."
-            mkdir -p /mnt/azurefiles
+            echo "Mount path /mnt/azurefiles bestaat niet of is niet toegankelijk."
+            echo "Gebruik tijdelijk pad /tmp/azurefiles."
+            mkdir -p /tmp/azurefiles
+            export TEMP_MOUNT_PATH="/tmp/azurefiles"
           else
-            echo "Mount path exists."
+            echo "Mount path /mnt/azurefiles is beschikbaar."
+            export TEMP_MOUNT_PATH="/mnt/azurefiles"
           fi
+          echo "TEMP_MOUNT_PATH=${TEMP_MOUNT_PATH}" >> $GITHUB_ENV
 
-      # Stap 7: Controleer inhoud van de gemounte map
-      - name: 'Validate Azure File Share Mount'
+      # Stap 8: Valideer en test schrijven naar het geselecteerde pad
+      - name: 'Test Write to Mount Path'
         run: |
-          echo "Controleer inhoud van de gemounte map:"
-          ls -l /mnt/azurefiles || echo "Geen bestanden gevonden in de map"
+          echo "Test data" > ${{ env.TEMP_MOUNT_PATH }}/test.txt
+          echo "Bestand aangemaakt: ${TEMP_MOUNT_PATH}/test.txt"
+          ls -l ${{ env.TEMP_MOUNT_PATH }}
